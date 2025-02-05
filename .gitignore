@@ -1,0 +1,37 @@
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-error.log
+pnpm-debug.log
+
+# Directorios de construcción y dependencias
+dist/
+build/
+.cache/
+.out/
+.next/
+.vercel/
+.netlify/
+
+# Variables de entorno y configuración
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs y bases de datos locales
+logs/
+*.log
+*.sqlite
+*.sqlite3
+*.db
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de configuración del editor
+.vscode/
+.idea/
+*.swp
