@@ -5,8 +5,7 @@
   "scripts": {
     "test": "jest --passWithNoTests",
     "build": "tsc",
-    "start": "node dist/app.js",
-    "postinstall": "npm install --omit=dev"
+    "start": "node dist/app.js"
   },
   "keywords": [],
   "author": "",
