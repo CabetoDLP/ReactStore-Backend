@@ -11,7 +11,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const router = Router();
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwtSecret = process.env.JWT_SECRET as string;
 
 if (!jwtSecret) {

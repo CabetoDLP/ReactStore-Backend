@@ -31,7 +31,7 @@ const app = express();
 const httpServer = http.createServer(app); // Crear un servidor HTTP
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CORS_ORIGIN, //'http://localhost:5173',
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     methods: process.env.CORS_METHODS?.split(',') || ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: false,
   },
@@ -39,7 +39,7 @@ const io = new Server(httpServer, {
 
 // Opciones de CORS
 export const corsOptions = {
-  origin: process.env.CORS_ORIGIN, //'http://localhost:5173',
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   methods: process.env.CORS_METHODS?.split(',') as string[] || ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: [
     'Content-Type',
