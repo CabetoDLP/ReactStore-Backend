@@ -33,7 +33,7 @@ const io = new Server(httpServer, {
   cors: {
     origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     methods: process.env.CORS_METHODS?.split(',') || ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: false,
+    credentials: true,
   },
 });
 
@@ -49,7 +49,7 @@ export const corsOptions = {
     'Origin',
   ],
   exposedHeaders: ['Authorization', 'Set-Cookie'],
-  credentials: false,
+  credentials: true,
   optionsSuccessStatus: 204,
   preflightContinue: false,
 };
