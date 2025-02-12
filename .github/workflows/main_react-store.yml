@@ -1,6 +1,3 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
 name: Build and deploy Node.js app to Azure Web App - react-store
 
 on:
@@ -33,8 +30,8 @@ jobs:
       - name: Run tests (if applicable)
         run: npm run test --if-present
 
-      - name: Prepare artifact for deployment
-        run: zip -r release.zip dist package.json package-lock.json node_modules
+      - name: Prepare artifact for deployment (without node_modules)
+        run: zip -r release.zip dist package.json package-lock.json
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -61,23 +58,27 @@ jobs:
       - name: Unzip artifact for deployment
         run: unzip release.zip
 
+      - name: Ensure app.js exists before deploying
+        run: |
+          if [ ! -f "dist/app.js" ]; then
+            echo "ERROR: dist/app.js not found!"
+            exit 1
+          fi
       - name: Login to Azure
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_5A93FFFB85F54699983E8E956AFD7564 }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_DAA69770B81E4481987BBA6A8F8A2C4E }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_8AF18DF8F14C400FBB8444F6981B4A95 }}
-
+          
       - name: Set Node.js startup command for Azure
         run: |
-          echo "STARTUP_COMMAND=node dist/app.js" >> $GITHUB_ENV
-
-      - name: Deploy to Azure Web App
+          echo "STARTUP_COMMAND=npm install && node dist/app.js" >> $GITHUB_ENV
+      - name: Deploy to Azure Web App (optimized package path)
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'react-store'
           slot-name: 'Production'
-          package: .
-
-          
+          package: release.zip
+          startup-command: ${{ env.STARTUP_COMMAND }}

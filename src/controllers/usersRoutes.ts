@@ -199,9 +199,9 @@ router.post('/users/login', async (req: Request<{}, {}, UserAuth>, res: Response
 
     // Configures the cookie
     res.cookie('auth_token', token, {
-      httpOnly: false, // Prevents JavaScript access
+      httpOnly: true, // Prevents JavaScript access
       secure: false, // Only sent over HTTPS in production
-      sameSite: 'lax', // Prevents CSRF
+      sameSite: 'none', // Prevents CSRF
       maxAge: process.env.COOKIE_MAX_AGE as unknown as number, // 1 hour
     });
 
