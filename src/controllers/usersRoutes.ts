@@ -228,12 +228,12 @@ router.post('/users/register', cors(corsOptions), upload.single('image'), async 
         <p>Your verification code is: <strong>${verificationCode}</strong></p>
         <p>You can verify your account using the following link:</p>
         <p>
-          <a href="https://${process.env.WEBSITE_HOSTNAME}/userVerity?email=${email}" target="_blank" rel="noopener noreferrer">
+          <a href="https://${process.env.WEBSITE_FRONTEND_HOSTNAME}/userVerity?email=${email}" target="_blank" rel="noopener noreferrer">
             Verify your account
           </a>
         </p>
         <p>If the link does not work, copy and paste this URL into your browser:</p>
-        <p>https://${process.env.WEBSITE_HOSTNAME}/userVerity?email=${email}</p>
+        <p>https://${process.env.WEBSITE_FRONTEND_HOSTNAME}/userVerity?email=${email}</p>
       `,
     };
 
