@@ -32,9 +32,9 @@ const upload = multer({
 
 // Cloudinary configuration
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, // 'dzipy5bme'
-  api_key: process.env.CLOUDINARY_API_KEY, // '763235895277341'
-  api_secret: process.env.CLOUDINARY_API_SECRET, // 'dg_y8rJuUsMtT65Jt7lfMBCD4vk'
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
+  api_key: process.env.CLOUDINARY_API_KEY, 
+  api_secret: process.env.CLOUDINARY_API_SECRET,
   secure: true,
 });
 
@@ -343,9 +343,9 @@ router.post('/users/login', async (req: Request<{}, {}, UserAuth>, res: Response
 
     // Set the cookie
     res.cookie('auth_token', token, {
-      httpOnly: false, // Prevent access from JavaScript
+      httpOnly: true, // Prevent access from JavaScript
       secure: process.env.NODE_ENV === 'production', // Only works over HTTPS in production
-      sameSite: 'lax', // Prevent CSRF
+      sameSite: 'none', // Prevent CSRF
       maxAge: process.env.COOKIE_MAX_AGE as unknown as number, // 1 hour
     });
 
