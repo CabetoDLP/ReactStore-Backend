@@ -8,6 +8,7 @@ import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
+import nodemailer from 'nodemailer'; // Import Nodemailer to send emails
 dotenv.config();
 
 const router = Router();
@@ -16,29 +17,28 @@ const jwtSecret = process.env.JWT_SECRET as string;
 
 if (!jwtSecret) {
   console.error('JWT_SECRET is not defined');
-  process.exit(1);  // Esto detendría la ejecución si no se define JWT_SECRET
+  process.exit(1);  // This will stop execution if JWT_SECRET is not defined
 }
 
 router.use(cookieParser());
 
-
-// Configuración de multer para manejar uploads
+// Multer configuration for handling uploads
 const upload = multer({
   limits: {
-    fileSize: process.env.MAX_FILE_SIZE as unknown as number//5 * 1024 * 1024 // 5MB limit
+    fileSize: process.env.MAX_FILE_SIZE as unknown as number // 5 * 1024 * 1024 // 5MB limit
   },
   dest: 'uploads/'
-});// 'images' es el campo del formulario
+}); // 'images' is the form field
 
-// Configuración de Cloudinary
+// Cloudinary configuration
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, //'dzipy5bme'
-  api_key: process.env.CLOUDINARY_API_KEY, //'763235895277341'
-  api_secret: process.env.CLOUDINARY_API_SECRET, //'dg_y8rJuUsMtT65Jt7lfMBCD4vk'
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, // 'dzipy5bme'
+  api_key: process.env.CLOUDINARY_API_KEY, // '763235895277341'
+  api_secret: process.env.CLOUDINARY_API_SECRET, // 'dg_y8rJuUsMtT65Jt7lfMBCD4vk'
   secure: true,
 });
 
-//Interfaces
+// Interfaces
 interface User {
   name: string;
   lastName: string;
@@ -49,6 +49,11 @@ interface User {
 interface UserAuth {
   email: string;
   password: string;
+}
+
+interface UserCodeAuth {
+  email: string;
+  code: string;
 }
 
 interface Product {
@@ -83,75 +88,85 @@ interface Filters {
 }
 
 interface JwtPayload {
-  userid: string;  // Aseguramos que el payload contiene un 'userid' como string
+  userid: string;  // Ensure the payload contains a 'userid' as a string
 }
 
 export function getUserFromToken(token: string): JwtPayload | null {
   try {
-    // Aquí hacemos una "type assertion" para decirle a TypeScript que el token será de tipo JwtPayloadWithUserId
+    // Here we make a "type assertion" to tell TypeScript that the token will be of type JwtPayloadWithUserId
     const decoded: JwtPayload = jwt.verify(token, jwtSecret) as JwtPayload;
 
-    // Comprobar si el token contiene un `userid` y si es válido
+    // Check if the token contains a `userid` and if it is valid
     if (!decoded.userid) {
       throw new Error('Token does not contain a valid user ID');
     }
 
-    return decoded;  // Devolvemos el payload decodificado
+    return decoded;  // Return the decoded payload
   } catch (error) {
     console.error('Token is invalid or expired', error);
-    return null;  // Si el token es inválido o no contiene `userid`, devolvemos null
+    return null;  // If the token is invalid or does not contain `userid`, return null
   }
 }
 
-//USERS
+// USERS
 
-//Register
+// Configure Nodemailer transport
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // Use Gmail or any other service
+  auth: {
+    user: process.env.EMAIL_USER, // Your email
+    pass: process.env.EMAIL_APP_PASSWORD, // Your password
+  },
+});
+
+// Register
+/*
 router.post('/users/register', cors(corsOptions), upload.single('image'), async (req: Request<{}, {}, User>, res: Response) => {
   try {
     const userid = uuidv4();
     const { name, lastName, email, password } = req.body;
 
-    // Validar los campos del usuario
+    // Validate user fields
     if (!name || !lastName || !email || !password) {
       res.status(400).json({ message: 'All user data is mandatory' });
       return;
     }
 
-    // Verificar si el correo ya existe en la base de datos
+    // Check if the email already exists in the database
     const emailCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
 
     if (emailCheck.rows.length > 0) {
-      res.status(409).json({ message: 'El correo ya está registrado' });
+      res.status(409).json({ message: 'Email is already registered' });
       return;
     }
 
-    // Verificar si la imagen fue proporcionada
+    // Check if the image was provided
     const file = req.file;
     if (!file) {
       res.status(400).json({ message: 'Profile image is required' });
       return;
     }
 
-    // Subir la imagen a Cloudinary
-    const userFolder = process.env.USER_FOLDER as string; //`ReactStore/Users`;
+    // Upload the image to Cloudinary
+    const userFolder = process.env.USER_FOLDER as string; // `ReactStore/Users`;
     const imageUploadResult = await cloudinary.uploader.upload(file.path, {
       folder: userFolder,
-      public_id: userid, // Nombre basado en el identificador del usuario
+      public_id: userid, // Name based on the user's identifier
       format: 'webp',
     });
 
     const profileImageUrl = imageUploadResult.secure_url;
 
-    // Hashear la contraseña
+    // Hash the password
     const hashedPassword: string = await bcrypt.hash(password, 10);
 
-    // Crear el usuario en la base de datos
+    // Create the user in the database
     const createdAccount = await pool.query(
       'INSERT INTO users (userid, name, lastName, email, password, profileimageurl, createdAt) VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *',
       [userid, name, lastName, email, hashedPassword, profileImageUrl]
     );
 
-    // Responder con el usuario creado
+    // Respond with the created user
     res.status(201).json({
       message: 'User registered successfully',
       user: createdAccount.rows[0],
@@ -161,47 +176,176 @@ router.post('/users/register', cors(corsOptions), upload.single('image'), async 
     res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 });
+*/
 
+router.post('/users/register', cors(corsOptions), upload.single('image'), async (req: Request<{}, {}, User>, res: Response) => {
+  try {
+    const userid = uuidv4();
+    const { name, lastName, email, password } = req.body;
 
-//Login
+    // Validate user fields
+    if (!name || !lastName || !email || !password) {
+      res.status(400).json({ message: 'All user data is mandatory' });
+      return;
+    }
+
+    // Check if the email already exists in the database
+    const emailCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+
+    if (emailCheck.rows.length > 0) {
+      res.status(409).json({ message: 'Email is already registered' });
+      return;
+    }
+
+    // Check if the image was provided
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ message: 'Profile image is required' });
+      return;
+    }
+
+    // Upload the image to Cloudinary
+    const userFolder = process.env.USER_FOLDER as string; // `ReactStore/Users`;
+    const imageUploadResult = await cloudinary.uploader.upload(file.path, {
+      folder: userFolder,
+      public_id: userid, // Name based on the user's identifier
+      format: 'webp',
+    });
+
+    const profileImageUrl = imageUploadResult.secure_url;
+
+    // Hash the password
+    const hashedPassword: string = await bcrypt.hash(password, 10);
+
+    // Generate verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000); // 6-digit code
+
+    // Send the verification code via email
+    const mailOptions = {
+      to: email, // User's email
+      subject: 'Verification code', // Email subject
+      html: `
+        <p>Your verification code is: <strong>${verificationCode}</strong></p>
+        <p>You can verify your account using the following link:</p>
+        <p>
+          <a href="https://${process.env.WEBSITE_HOSTNAME}/userVerity?email=${email}" target="_blank" rel="noopener noreferrer">
+            Verify your account
+          </a>
+        </p>
+        <p>If the link does not work, copy and paste this URL into your browser:</p>
+        <p>https://${process.env.WEBSITE_HOSTNAME}/userVerity?email=${email}</p>
+      `,
+    };
+
+    // Attempt to send the email
+    await transporter.sendMail(mailOptions);
+
+    // If the email is sent successfully, register the user in the database
+    const createdAccount = await pool.query(
+      'INSERT INTO users (userid, name, lastname, email, password, profileimageurl, createdat, verification_code, is_verified) VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7, $8) RETURNING *',
+      [userid, name, lastName, email, hashedPassword, profileImageUrl, verificationCode, false] // is_verified = false
+    );
+
+    // Respond with the created user
+    res.status(201).json({
+      message: 'User registered successfully. Please check your email to verify your account.',
+      user: createdAccount.rows[0],
+    });
+  } catch (err: any) {
+    console.error('Error occurred while signing up user: ', err.message);
+
+    // If there is an error sending the email, do not register the user
+    res.status(500).json({ message: 'Error sending verification email. User not registered.', error: err.message });
+  }
+});
+
+router.post('/users/verify', async (req: Request<{}, {}, UserCodeAuth>, res: Response) => {
+  try {
+    const { email, code } = req.body;
+
+    // Validate fields
+    if (!email || !code) {
+      res.status(400).json({ message: 'Email and verification code are required' });
+      return;
+    }
+
+    // Convert code to number
+    const verificationCode = parseInt(code, 10);
+    if (isNaN(verificationCode)) {
+      res.status(400).json({ message: 'Invalid verification code format' });
+      return;
+    }
+
+    // Find user by email
+    const user = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+
+    if (user.rows.length === 0) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    // Verify the code (compare as number)
+    if (user.rows[0].verification_code === verificationCode) {
+      // Mark the account as verified
+      await pool.query('UPDATE users SET is_verified = true WHERE email = $1', [email]);
+
+      res.status(200).json({ message: 'Account verified successfully' });
+    } else {
+      res.status(400).json({ message: 'Invalid verification code' });
+    }
+  } catch (err: any) {
+    console.error('Error occurred while verifying user: ', err.message);
+    res.status(500).json({ message: 'Internal server error', error: err.message });
+  }
+});
+
+// Login
 router.post('/users/login', async (req: Request<{}, {}, UserAuth>, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    // Verifies user data
+    // Validate user data
     if (!email || !password) {
       res.status(400).json({ message: 'All data is mandatory' });
       return;
     }
 
-    // Verifies if the user exists
+    // Check if the user exists
     const accountCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    
+
     if (accountCheck.rows.length === 0) {
       res.status(401).json({ message: 'Invalid email or password' });
       return;
     }
 
-    // Validates password
-    const isPasswordValid = await bcrypt.compare(password, accountCheck.rows[0].password);
+    const user = accountCheck.rows[0];
+
+    // Check if the account is verified
+    if (!user.is_verified) {
+      res.status(403).json({ message: 'Account not verified. Please verify your account before logging in.' });
+      return;
+    }
+
+    // Validate the password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
       res.status(401).json({ message: 'Invalid email or password' });
       return;
     }
 
-    // Creates the JSON Web Token (JWT)
+    // Create JSON Web Token (JWT)
     const token = jwt.sign(
-      { userid: accountCheck.rows[0].userid },
+      { userid: user.userid },
       jwtSecret,
       { expiresIn: process.env.JWT_EXPIRES_IN } // '1h'
     );
 
-    // Configures the cookie
+    // Set the cookie
     res.cookie('auth_token', token, {
-      httpOnly: true, // Prevents JavaScript access
-      secure: process.env.NODE_ENV === 'production', // Only sent over HTTPS in production
-      sameSite: 'none', // Prevents CSRF
+      httpOnly: false, // Prevent access from JavaScript
+      secure: process.env.NODE_ENV === 'production', // Only works over HTTPS in production
+      sameSite: 'lax', // Prevent CSRF
       maxAge: process.env.COOKIE_MAX_AGE as unknown as number, // 1 hour
     });
 
@@ -213,9 +357,9 @@ router.post('/users/login', async (req: Request<{}, {}, UserAuth>, res: Response
   }
 });
 
-//PRODUCTS
+// PRODUCTS
 
-//Create a product
+// Create a product
 router.post('/products/create', upload.array('images', 5), async (req: Request<{}, {}, Product>, res: Response) => {
   try {
     const token = req.cookies.auth_token;
@@ -282,7 +426,7 @@ router.post('/products/create', upload.array('images', 5), async (req: Request<{
   }
 });
 
-//Edit a product
+// Edit a product
 router.post('/products/update', upload.array('images', 5), async (req: Request<{}, {}, UserProduct>, res: Response) => {
   try {
     const token = req.cookies.auth_token;
@@ -315,10 +459,10 @@ router.post('/products/update', upload.array('images', 5), async (req: Request<{
       return;
     }
 
-    //If product doesn't exist
+    // If product doesn't exist
     const exists = await pool.query('SELECT 1 FROM products WHERE productid = $1 AND userid = $2 LIMIT 1', [productid, userid]);
     if (!exists) {
-      res.status(400).json({ message: `the product doesn't exists or the user doesn't own the product` });
+      res.status(400).json({ message: `The product doesn't exist or the user doesn't own the product` });
       return;
     }
 
@@ -348,7 +492,7 @@ router.post('/products/update', upload.array('images', 5), async (req: Request<{
 
     // Respond with created product
     res.status(201).json({
-      message: 'Product created successfully',
+      message: 'Product updated successfully',
       product: updatedProduct.rows[0],
     });
 
@@ -358,7 +502,7 @@ router.post('/products/update', upload.array('images', 5), async (req: Request<{
   }
 });
 
-//Delete
+// Delete
 router.post('/products/delete', async (req: Request<{}, {}, ProductReference>, res: Response) => {
   try {
     const token = req.cookies.auth_token;
@@ -401,29 +545,29 @@ router.post('/products/delete', async (req: Request<{}, {}, ProductReference>, r
     });
 
   } catch (err: any) {
-    console.error('Error occurred while creating product: ', err.message);
+    console.error('Error occurred while deleting product: ', err.message);
     res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 });
 
-//View a product
+// View a product
 router.post('/products/showProduct', async (req: Request<{}, {}, ProductReference>, res: Response) => {
   try {
     const { productid } = req.body;
 
-    // Validates data from request body
+    // Validate data from request body
     if (!productid) {
       res.status(400).json({ message: 'Product reference is mandatory' });
       return;
     }
 
-    //Consult all product public information
+    // Query all public product information
     const selectedProduct = await pool.query(
       'SELECT productid, name, description, price, stock, imageurls, productcategories.category AS category, productcategories.categoryid AS categoryid FROM products INNER JOIN productcategories ON products.categoryid = productcategories.categoryid WHERE productid = $1 and isactive = TRUE', 
       [productid]
     );
 
-    // Responder con el producto creado
+    // Respond with the created product
     res.status(201).json({
       message: 'Product created successfully',
       product: selectedProduct.rows[0],
@@ -434,7 +578,7 @@ router.post('/products/showProduct', async (req: Request<{}, {}, ProductReferenc
   }
 });
 
-//View user's products
+// View user's products
 router.get('/products/showUserProducts', async (req: Request<{}, {}>, res: Response) => {
   try {
     const token = req.cookies.auth_token;
@@ -450,19 +594,19 @@ router.get('/products/showUserProducts', async (req: Request<{}, {}>, res: Respo
       return;
     }
 
-    // Validates data from request body
+    // Validate data from request body
     if (!userid) {
       res.status(400).json({ message: 'User reference is mandatory' });
       return;
     }
 
-    //Consult all product public information
+    // Query all public product information
     const userProducts = await pool.query(
       'SELECT productid, name, price, imageurls FROM products WHERE userid = $1 and isactive = TRUE', 
       [userid]
     );
 
-    // Responder con el producto creado
+    // Respond with the created product
     res.status(201).json({
       message: 'User products',
       product: userProducts.rows,
@@ -472,12 +616,13 @@ router.get('/products/showUserProducts', async (req: Request<{}, {}>, res: Respo
     res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 });
+
 // Add to cart
 router.post('/products/alterProductToCart', async (req: Request<{}, {}, CartProduct>, res: Response) => {
   try {
     const token = req.cookies.auth_token;
 
-    // Validar la existencia del token
+    // Validate token existence
     if (!token) {
       res.status(401).json({ message: 'Unauthorized. Token not found' });
       return;
@@ -491,15 +636,15 @@ router.post('/products/alterProductToCart', async (req: Request<{}, {}, CartProd
 
     const { productid, quantity } = req.body;
 
-    // Validar los campos del cuerpo de la solicitud
+    // Validate request body fields
     if (!productid || quantity == null || quantity < 0) {
       res.status(400).json({ message: 'All data is mandatory and quantity must be non-negative' });
       return;
     }
 
-    const cartProductid = uuidv4(); // Generar ID único para el producto en el carrito
+    const cartProductid = uuidv4(); // Generate unique ID for the product in the cart
 
-    // Verificar si el producto ya existe en el carrito del usuario
+    // Check if the product already exists in the user's cart
     const cartProductExists = await pool.query(
       'SELECT 1 FROM usercartproducts WHERE productid = $1 AND userid = $2 AND isactive = TRUE',
       [productid, userid]
@@ -508,7 +653,7 @@ router.post('/products/alterProductToCart', async (req: Request<{}, {}, CartProd
     let cartProduct;
 
     if (cartProductExists.rows.length > 0) {
-      // Actualizar la cantidad o desactivar el producto si la cantidad es 0
+      // Update the quantity or deactivate the product if the quantity is 0
       if (quantity === 0) {
         cartProduct = await pool.query(
           'UPDATE usercartproducts SET quantity = $3, isactive = FALSE WHERE productid = $1 AND userid = $2 RETURNING *',
@@ -521,14 +666,14 @@ router.post('/products/alterProductToCart', async (req: Request<{}, {}, CartProd
         );
       }
     } else {
-      // Insertar un nuevo producto en el carrito
+      // Insert a new product into the cart
       cartProduct = await pool.query(
         'INSERT INTO usercartproducts (cartproductid, userid, productid, quantity, isactive, createdat) VALUES ($1, $2, $3, $4, TRUE, NOW()) RETURNING *',
         [cartProductid, userid, productid, quantity]
       );
     }
 
-    // Responder con el producto alterado
+    // Respond with the altered product
     res.status(201).json({
       message: 'Product altered on cart successfully',
       cartProduct: cartProduct.rows[0],
@@ -542,7 +687,7 @@ router.post('/products/alterProductToCart', async (req: Request<{}, {}, CartProd
 });
 
 
-//Delete from cart
+// Delete from cart
 router.post('/cart/deleteProduct', async (req: Request<{}, {}, ProductReference>, res: Response) => {
   try {
     const token = req.cookies.auth_token;
@@ -560,7 +705,7 @@ router.post('/cart/deleteProduct', async (req: Request<{}, {}, ProductReference>
 
     const { productid} = req.body;
 
-    // Validar los campos del cuerpo de la solicitud
+    // Validate request body fields
     if (!productid) {
       res.status(400).json({ message: 'All data is mandatory' });
       return;
@@ -584,7 +729,7 @@ router.post('/cart/deleteProduct', async (req: Request<{}, {}, ProductReference>
       [productid, userid]
     );
 
-    // Responder con el producto creado
+    // Respond with the created product
     res.status(201).json({
       message: 'Product altered on cart successfully',
       cartProduct: cartProduct.rows[0],
@@ -595,7 +740,7 @@ router.post('/cart/deleteProduct', async (req: Request<{}, {}, ProductReference>
   }
 });
 
-//Show user's cart products
+// Show user's cart products
 router.get('/cart/showUserProducts', async (req: Request<{}, {}>, res: Response) => {
   try {
     const token = req.cookies.auth_token;
@@ -619,13 +764,13 @@ router.get('/cart/showUserProducts', async (req: Request<{}, {}>, res: Response)
     let cartProduct;
 
     if(!userCartProducts){
-      res.status(404).json({ message: "No products at user`s cart have been found." });
+      res.status(404).json({ message: "No products at user's cart have been found." });
       return;
     }
 
-    // Responder con el producto creado
+    // Respond with the created product
     res.status(200).json({
-      message: 'cart products showed succesfully',
+      message: 'Cart products showed successfully',
       cartProducts: userCartProducts.rows,
     });
   } catch (err: any) {
@@ -634,9 +779,9 @@ router.get('/cart/showUserProducts', async (req: Request<{}, {}>, res: Response)
   }
 });
 
-//Buy products from user cart
+// Buy products from user cart
 router.get('/cart/buyProducts', async (req: Request<{}, {}>, res: Response) => {
-  const client = await pool.connect(); // Obtener conexión del pool
+  const client = await pool.connect(); // Get connection from the pool
   try {
     const token = req.cookies.auth_token;
 
@@ -651,10 +796,10 @@ router.get('/cart/buyProducts', async (req: Request<{}, {}>, res: Response) => {
       return;
     }
 
-    // Iniciar la transacción
+    // Start the transaction
     await client.query('BEGIN');
 
-    // Listar los productos del carrito del usuario
+    // List the products in the user's cart
     const userCartProducts = await client.query(
       'SELECT cartproductid, productid, quantity FROM usercartproducts WHERE userid = $1 AND isactive = TRUE',
       [userid]
@@ -662,14 +807,14 @@ router.get('/cart/buyProducts', async (req: Request<{}, {}>, res: Response) => {
 
     if (userCartProducts.rows.length === 0) {
       res.status(400).json({ message: 'There are no products in the cart' });
-      await client.query('ROLLBACK'); // Revertir la transacción
+      await client.query('ROLLBACK'); // Rollback the transaction
       return;
     }
 
     for (const cartProduct of userCartProducts.rows) {
       const { productid, quantity } = cartProduct;
 
-      // Verificar stock del producto
+      // Check product stock
       const product = await client.query(
         'SELECT stock FROM products WHERE productid = $1 AND isactive = TRUE',
         [productid]
@@ -677,18 +822,18 @@ router.get('/cart/buyProducts', async (req: Request<{}, {}>, res: Response) => {
 
       if (product.rows.length === 0 || product.rows[0].stock < quantity) {
         res.status(422).json({ message: `Insufficient stock for product ID: ${productid}` });
-        await client.query('ROLLBACK'); // Revertir la transacción
+        await client.query('ROLLBACK'); // Rollback the transaction
         return;
       }
 
-      // Reducir el stock del producto
+      // Reduce the product stock
       await client.query(
         `UPDATE products SET stock = stock - $1 WHERE productid = $2`,
         [quantity, productid]
       );
     }
 
-    // Insertar los productos del carrito en purchasedproducts
+    // Insert the cart products into purchasedproducts
     for (const cartProduct of userCartProducts.rows) {
       const purchasedProductId = uuidv4();
       await client.query(
@@ -697,25 +842,25 @@ router.get('/cart/buyProducts', async (req: Request<{}, {}>, res: Response) => {
       );
     }
 
-    // Desactivar los productos del carrito
+    // Deactivate the cart products
     await client.query(
       'UPDATE usercartproducts SET isactive = FALSE WHERE userid = $1 AND isactive = TRUE',
       [userid]
     );
 
-    // Confirmar la transacción
+    // Commit the transaction
     await client.query('COMMIT');
     res.status(200).json({ message: 'Purchase completed successfully' });
   } catch (err: any) {
-    await client.query('ROLLBACK'); // Revertir la transacción en caso de error
+    await client.query('ROLLBACK'); // Rollback the transaction in case of error
     console.error('Error occurred while buying products: ', err.message);
     res.status(500).json({ message: 'Internal server error', error: err.message });
   } finally {
-    client.release(); // Liberar la conexión
+    client.release(); // Release the connection
   }
 });
 
-//View a product
+// View purchased products
 router.get('/purchases/showPurchasedProducts', async (req: Request<{}, {}>, res: Response) => {
   try {
     const token = req.cookies.auth_token;
@@ -731,12 +876,12 @@ router.get('/purchases/showPurchasedProducts', async (req: Request<{}, {}>, res:
       return;
     }
 
-    //Consult all product public information
+    // Query all public product information
     const purchasedProducts = await pool.query(
       'SELECT purchasedproducts.productid AS productid, products.name AS name, purchasedproducts.quantity AS quantity, products.price AS price, products.imageurls[1] AS imageurl, purchasedproducts.createdat AS createdat FROM purchasedproducts INNER JOIN products ON purchasedproducts.productid = products.productid'
     );
 
-    // Responder con el producto creado
+    // Respond with the created product
     res.status(200).json({
       message: 'Listed purchased products',
       purchasedProducts: purchasedProducts.rows,
@@ -747,16 +892,16 @@ router.get('/purchases/showPurchasedProducts', async (req: Request<{}, {}>, res:
   }
 });
 
-//View a product
+// View product categories
 router.get('/products/showCategories', async (req: Request<{}, {}>, res: Response) => {
   try {
 
-    //Consult all product public information
+    // Query all public product information
     const productCategories = await pool.query(
       'SELECT categoryid, category FROM productcategories'
     );
 
-    // Responder con el producto creado
+    // Respond with the created product
     res.status(200).json({
       message: 'Listed product categories',
       categories: productCategories.rows,
@@ -771,53 +916,53 @@ router.post("/products/list", async (req: Request, res: Response) => {
   try {
     const token = req.cookies.auth_token;
 
+    // Check if the token exists
     if (!token) {
       res.status(401).json({ message: 'Unauthorized. Token not found' });
       return;
     }
-    console.log(req.body);
-    console.log(req.files);
+
+    // Get the userid from the token
     const userid = getUserFromToken(token)?.userid;
     if (!userid) {
       res.status(401).json({ message: 'Unauthorized. Invalid token' });
       return;
     }
-    
-    // Obtén el filtro desde el cuerpo de la solicitud
+
+    // Get the filter from the request body
     const { filter } = req.body;
 
-    // Validar que el filtro sea proporcionado
-    if (!filter) {
-      res.status(400).json({ message: "Filter is required." });
-      return;
+    let products;
+    if (!filter || filter.trim() === '') {
+      // If there is no filter, select 10 random products
+      products = await pool.query(`
+        SELECT productid, name, price, imageurls 
+        FROM products 
+        WHERE isactive = TRUE AND userid != $1
+        ORDER BY RANDOM()
+        LIMIT 10
+      `, [userid]);
+    } else {
+      // If there is a filter, perform the normal search
+      products = await pool.query(`
+        SELECT productid, name, price, imageurls 
+        FROM products 
+        WHERE name ILIKE $1 AND isactive = TRUE AND userid != $2
+      `, [`%${filter}%`, userid]);
     }
 
-    // Log para verificar el filtro recibido
-    console.log("Filter received:", filter);
-
-    // Ejecuta la consulta con los parámetros
-    const products = await pool.query(`
-      SELECT productid, name, price, imageurls 
-      FROM products 
-      WHERE name ILIKE $1 AND isactive = TRUE AND userid != $2
-    `, [filter, userid]);
-
-    // Validar si no hay resultados
+    // Validate if there are no results
     if (products.rows.length === 0) {
       res.status(404).json({ message: "No products found." });
       return;
     }
 
-    // Retornar los productos encontrados
+    // Return the found products
     res.json(products.rows);
   } catch (err: any) {
     console.error(err.message);
     res.status(500).json({ error: "Error searching for products" });
   }
 });
-
-
-
-
 
 export default router;

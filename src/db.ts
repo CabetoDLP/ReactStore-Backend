@@ -1,18 +1,21 @@
 import pkg from 'pg';
 import dotenv from 'dotenv';
+dotenv.config();
 
 const { Pool } = pkg;
 
 export const pool = new Pool({
-  user: 'postgres', //postgres
-  host: 'reactstore.postgres.database.azure.com', //localhost
-  database: 'postgres', //ReactStore
-  password: 'cabeto#1', //strixgale
+  user: process.env.DB_USER, 
+  host: process.env.DB_HOST,
+  database: process.env.DB,
+  password: process.env.DB_PASS,
   port: 5432,
-  //ssl: true
-  ssl: {
-    rejectUnauthorized: false // Este parámetro puede ayudar si hay problemas con el certificado SSL
-  }
+  ssl: true  //false
+  /*
+    ssl: {
+      rejectUnauthorized: false // This param helps if gets problems with ssl certificates
+    }
+  */
 });
 
 pool
