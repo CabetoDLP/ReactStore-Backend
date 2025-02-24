@@ -10,7 +10,7 @@ export const pool = new Pool({
   database: process.env.DB,
   password: process.env.DB_PASS,
   port: 5432,
-  ssl: true  //false
+  ssl: process.env.NODE_ENV === 'production' //false
   /*
     ssl: {
       rejectUnauthorized: false // This param helps if gets problems with ssl certificates
@@ -20,7 +20,7 @@ export const pool = new Pool({
 
 pool
   .connect()
-  .then(() => console.log('Conexión exitosa con PostgreSQL'))
-  .catch(err => console.error('Error al conectar:', err));
+  .then(() => console.log('Successful PostgreSQL connection'))
+  .catch(err => console.error('Error while connecting:', err));
 
 export default pool;

@@ -4,7 +4,7 @@ npm-debug.log*
 yarn-error.log
 pnpm-debug.log
 
-# Directorios de construcción y dependencias
+# Build directories and dependencies
 dist/
 build/
 .cache/
@@ -13,25 +13,25 @@ build/
 .vercel/
 .netlify/
 
-# Variables de entorno y configuración
+# environment variables and configuration
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Logs y bases de datos locales
+# Logs and local databases
 logs/
 *.log
 *.sqlite
 *.sqlite3
 *.db
 
-# Archivos del sistema
+# System files
 .DS_Store
 Thumbs.db
 
-# Archivos de configuración del editor
+# Editor settings files
 .vscode/
 .idea/
 *.swp

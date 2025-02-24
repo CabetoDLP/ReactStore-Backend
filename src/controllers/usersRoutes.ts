@@ -119,65 +119,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Register
-/*
-router.post('/users/register', cors(corsOptions), upload.single('image'), async (req: Request<{}, {}, User>, res: Response) => {
-  try {
-    const userid = uuidv4();
-    const { name, lastName, email, password } = req.body;
-
-    // Validate user fields
-    if (!name || !lastName || !email || !password) {
-      res.status(400).json({ message: 'All user data is mandatory' });
-      return;
-    }
-
-    // Check if the email already exists in the database
-    const emailCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-
-    if (emailCheck.rows.length > 0) {
-      res.status(409).json({ message: 'Email is already registered' });
-      return;
-    }
-
-    // Check if the image was provided
-    const file = req.file;
-    if (!file) {
-      res.status(400).json({ message: 'Profile image is required' });
-      return;
-    }
-
-    // Upload the image to Cloudinary
-    const userFolder = process.env.USER_FOLDER as string; // `ReactStore/Users`;
-    const imageUploadResult = await cloudinary.uploader.upload(file.path, {
-      folder: userFolder,
-      public_id: userid, // Name based on the user's identifier
-      format: 'webp',
-    });
-
-    const profileImageUrl = imageUploadResult.secure_url;
-
-    // Hash the password
-    const hashedPassword: string = await bcrypt.hash(password, 10);
-
-    // Create the user in the database
-    const createdAccount = await pool.query(
-      'INSERT INTO users (userid, name, lastName, email, password, profileimageurl, createdAt) VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *',
-      [userid, name, lastName, email, hashedPassword, profileImageUrl]
-    );
-
-    // Respond with the created user
-    res.status(201).json({
-      message: 'User registered successfully',
-      user: createdAccount.rows[0],
-    });
-  } catch (err: any) {
-    console.error('Error occurred while signing up user: ', err.message);
-    res.status(500).json({ message: 'Internal server error', error: err.message });
-  }
-});
-*/
-
 router.post('/users/register', cors(corsOptions), upload.single('image'), async (req: Request<{}, {}, User>, res: Response) => {
   try {
     const userid = uuidv4();
@@ -232,8 +173,6 @@ router.post('/users/register', cors(corsOptions), upload.single('image'), async 
             Verify your account
           </a>
         </p>
-        <p>If the link does not work, copy and paste this URL into your browser:</p>
-        <p>https://${process.env.WEBSITE_FRONTEND_HOSTNAME}/userVerity?email=${email}</p>
       `,
     };
 
@@ -343,9 +282,9 @@ router.post('/users/login', async (req: Request<{}, {}, UserAuth>, res: Response
 
     // Set the cookie
     res.cookie('auth_token', token, {
-      httpOnly: true, // Prevent access from JavaScript
+      httpOnly: process.env.NODE_ENV === 'production', // Prevent access from JavaScript
       secure: process.env.NODE_ENV === 'production', // Only works over HTTPS in production
-      sameSite: 'none', // Prevent CSRF
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Prevent CSRF
       maxAge: process.env.COOKIE_MAX_AGE as unknown as number, // 1 hour
     });
 
@@ -756,25 +695,40 @@ router.get('/cart/showUserProducts', async (req: Request<{}, {}>, res: Response)
       return;
     }
 
+    // Query to get cart products with product details and available stock
     const userCartProducts = await pool.query(
-      'SELECT usercartproducts.cartproductid, products.productid, products.name, usercartproducts.quantity, products.price, products.imageurls[1] AS imageurl FROM usercartproducts INNER JOIN products ON usercartproducts.productid = products.productid WHERE usercartproducts.userid = $1 AND usercartproducts.isactive = TRUE AND products.isactive = TRUE',
+      `SELECT 
+        usercartproducts.cartproductid, 
+        products.productid, 
+        products.name, 
+        usercartproducts.quantity, 
+        products.price, 
+        products.imageurls[1] AS imageurl, 
+        products.stock AS max_available_quantity 
+      FROM usercartproducts 
+      INNER JOIN products 
+        ON usercartproducts.productid = products.productid 
+      WHERE usercartproducts.userid = $1 
+        AND usercartproducts.isactive = TRUE 
+        AND products.isactive = TRUE`,
       [userid]
     );
-    
-    let cartProduct;
 
-    if(!userCartProducts){
-      res.status(404).json({ message: "No products at user's cart have been found." });
+    if (!userCartProducts.rows.length) {
+      res.status(204).json({
+        message: "No products at user's cart have been found.",
+        cartProducts: userCartProducts.rows, 
+      });
       return;
     }
 
-    // Respond with the created product
+    // Respond with the cart products and their maximum available quantity
     res.status(200).json({
       message: 'Cart products showed successfully',
       cartProducts: userCartProducts.rows,
     });
   } catch (err: any) {
-    console.error(`Error occurred while consulting user's cart products:` , err.message);
+    console.error(`Error occurred while consulting user's cart products:`, err.message);
     res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 });

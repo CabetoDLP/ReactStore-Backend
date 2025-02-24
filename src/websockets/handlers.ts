@@ -5,7 +5,7 @@ import cookie from 'cookie';
 
 export const websocketHandlers = (io: Server): void => {
 
-  // Definir el mapa de usuarios conectados
+  // Defines connected users map
   const connectedUsers = new Map<string, string>(); // userId -> socket.id
 
   const verifyUser = async (socket: Socket, userId: string): Promise<boolean> => {
@@ -14,14 +14,14 @@ export const websocketHandlers = (io: Server): void => {
   
     if (!token) {
       socket.emit('error', { message: 'Unauthorized. Token not found' });
-      socket.disconnect(); // Desconectar al usuario
+      socket.disconnect(); // Disconnects user
       return false;
     }
   
     const user = getUserFromToken(token);
     if (!user || user.userid !== userId) {
       socket.emit('error', { message: 'Unauthorized. Invalid or expired token' });
-      socket.disconnect(); // Desconectar al usuario
+      socket.disconnect(); // Disconnects user
       return false;
     }
   
@@ -48,10 +48,10 @@ export const websocketHandlers = (io: Server): void => {
       return;
     }
     
-    // Añadir el usuario al mapa de conexiones
+    // Add user to connected users map
     connectedUsers.set(userId, socket.id);
 
-    // Obtener todas las conversaciones del usuario
+    // Gets allthe conversationss that includes the user
     const conversationsQuery = `
     SELECT chatid
     FROM chats
@@ -65,7 +65,7 @@ export const websocketHandlers = (io: Server): void => {
         return;
       }
 
-      // Unir al usuario a todas las salas de conversación
+      // Connects the user to all chats rooms
       result.rows.forEach((row) => {
         socket.join(`chat_${row.chatid}`);
         console.log(`Usuario ${userId} unido a la conversación ${row.chatid}`);
@@ -75,11 +75,11 @@ export const websocketHandlers = (io: Server): void => {
     socket.on('joinConversation', async ({ chatId }) => {
 
       if (!(await verifyUser(socket, userId))) {
-        return; // Si el token no es válido, el evento se detiene aquí
+        return; // If token is not valid, event stops here
       }
 
       try {
-        // Obtener los detalles de la conversación, incluyendo las imágenes de perfil de los participantes
+        // Gets details from conversation, including profile images from participants
         const chatDetailsQuery = `
           SELECT
             c.chatid,
@@ -102,11 +102,11 @@ export const websocketHandlers = (io: Server): void => {
     
         const { buyeruserid, owneruserid, buyer_image, owner_image } = chatDetailsResult.rows[0];
     
-        // Determinar la imagen de perfil del usuario actual y del otro participante
+        // Defines profile image from current user and the other one
         const isCurrentUserImage = userId === buyeruserid ? buyer_image : owner_image;
         const otherUserImage = userId === buyeruserid ? owner_image : buyer_image;
     
-        // Cargar todos los mensajes de la conversación
+        // Charge all the message od the conversation
         const messagesResult = await pool.query(
           `
           SELECT
@@ -121,27 +121,27 @@ export const websocketHandlers = (io: Server): void => {
           [chatId]
         );
     
-        // Verificar si no hay mensajes
+        // Verifies if there are no messages
         if (messagesResult.rows.length === 0) {
           socket.emit('error', { message: 'No messages found for this chat' });
           return;
         }
     
-        // Formatear los mensajes para el cliente
+        // Formats the messsages for the user
         const formattedMessages = messagesResult.rows.map((message) => ({
           messageId: message.messageid,
-          isCurrentUser: message.senderuserid === userId, // Verificar si el mensaje es del usuario actual
+          isCurrentUser: message.senderuserid === userId, //Verifies if the message is from the current user
           content: message.content,
-          createdAt: message.createdat, // Devolver la fecha en su formato original
-          senderImage: message.senderuserid === userId ? isCurrentUserImage : otherUserImage, // Asignar la imagen de perfil correcta
+          createdAt: message.createdat, // Gives back the date at his current format
+          senderImage: message.senderuserid === userId ? isCurrentUserImage : otherUserImage, // Assigns the right profile image
         }));
     
-        // Enviar mensajes al cliente junto con las imágenes de perfil
+        // Sends messages for the user including the users images
         socket.emit('messages_listed', {
           chatId,
           messages: formattedMessages,
-          isCurrentUserImage, // Imagen de perfil del usuario actual
-          otherUserImage, // Imagen de perfil del otro participante
+          isCurrentUserImage, // Profile image of the current user
+          otherUserImage, // Profile image of the other user
         });
       } catch (err: any) {
         console.error('Error fetching conversation details:', err.message);
@@ -149,45 +149,44 @@ export const websocketHandlers = (io: Server): void => {
       }
     });
 
-    // Evento para crear una conversación y enviar un mensaje
+    // Event to create a conversation and to send a message
     socket.on('createConversationAndMessage', async ({ productid, content }) => {
-
       if (!(await verifyUser(socket, userId))) {
-        return; // Si el token no es válido, el evento se detiene aquí
+        return; // If token is not valid, event stops here
       }
-
+    
       try {
         if (!productid || !content) {
           socket.emit('error', { message: 'All data is mandatory' });
           return;
         }
-
-        // Obtener el usuario propietario del producto
+    
+        // Gets product's owner
         const productQuery = await pool.query('SELECT userid FROM products WHERE productid = $1', [productid]);
         if (productQuery.rows.length === 0) {
           socket.emit('error', { message: 'Product not found' });
           return;
         }
-
+    
         const owneruserid = productQuery.rows[0].userid;
-
-        // Verificar si la conversación ya existe
+    
+        // Verifies if conversation already exists
         const chatQuery = await pool.query(
           'SELECT chatid, buyeruserid, owneruserid FROM chats WHERE productid = $1 AND (buyeruserid = $2 OR owneruserid = $2)',
           [productid, userId]
         );
-
+    
         let chatId;
         let buyeruserid;
-
+    
         if (chatQuery.rows.length === 0) {
-          // Evitar que los propietarios creen conversaciones de sus propios productos
+          // Avoids users creatig conversations for their own products
           if (userId === owneruserid) {
             socket.emit('error', { message: 'You cannot create a conversation for your own product' });
             return;
           }
-
-          // Crear nueva conversación
+    
+          // Creates a new conversation
           const newChat = await pool.query(
             'INSERT INTO chats (productid, buyeruserid, owneruserid, createdat) VALUES ($1, $2, $3, NOW()) RETURNING chatid',
             [productid, userId, owneruserid]
@@ -198,40 +197,43 @@ export const websocketHandlers = (io: Server): void => {
           chatId = chatQuery.rows[0].chatid;
           buyeruserid = chatQuery.rows[0].buyeruserid;
         }
-
-        // Crear el mensaje asociado a la conversación
+    
+        // Creates the message related to the current conversation
         const newMessage = await pool.query(
           'INSERT INTO messages (chatid, senderuserid, content, createdat) VALUES ($1, $2, $3, NOW()) RETURNING *',
           [chatId, userId, content]
         );
-
-        // Formatear la respuesta con `isCurrentUser`
+    
+        // Formats respose with `isCurrentUser`
         const formattedMessage = {
           chatId,
           senderUserId: newMessage.rows[0].senderuserid,
           content: newMessage.rows[0].content,
           createdAt: newMessage.rows[0].createdat,
         };
-
-        // Emitir el nuevo mensaje a todos los usuarios en la sala excepto al remitente
+    
+        // Emits the message to all users connected at the room except by the current user
         socket.broadcast.to(`chat_${chatId}`).emit('message_created', {
           message: 'Message sent successfully',
           data: { ...formattedMessage, isCurrentUser: false },
         });
-
-        // Emitir evento al remitente con el mensaje formateado
+    
+        // Emits event to sender with the created message
         socket.emit('message_created', {
           message: 'Message sent successfully',
           data: { ...formattedMessage, isCurrentUser: true },
         });
-
-        // Identificar al receptor
+    
+        // Identifies the receiver
         const recipientUserId = userId === owneruserid ? buyeruserid : owneruserid;
-
-        // Obtener el socket.id del receptor
+    
+        // Gets the socketid from the receiver
         const recipientSocketId = connectedUsers.get(recipientUserId);
-
-        // Obtener la lista actualizada de conversaciones para el receptor
+    
+        // Gets the socket id from the sender
+        const senderSocketId = connectedUsers.get(userId);
+    
+        // Gets the updated list of conversations for the sender and for receiver
         const conversationsQuery = `
           SELECT
             c.chatid,
@@ -265,10 +267,10 @@ export const websocketHandlers = (io: Server): void => {
           WHERE c.buyeruserid = $1 OR c.owneruserid = $1
           ORDER BY last_message_date DESC;
         `;
-
-        const conversationsResult = await pool.query(conversationsQuery, [recipientUserId]);
-
-        const formattedConversations = conversationsResult.rows.map((conv) => ({
+    
+        // Gets conversations for receiver
+        const recipientConversationsResult = await pool.query(conversationsQuery, [recipientUserId]);
+        const formattedRecipientConversations = recipientConversationsResult.rows.map((conv) => ({
           chatId: conv.chatid,
           productId: conv.productid,
           productName: conv.product_name,
@@ -280,16 +282,39 @@ export const websocketHandlers = (io: Server): void => {
           otherUserId: conv.owneruserid === recipientUserId ? conv.buyeruserid : conv.owneruserid,
           otherUserImage: conv.owneruserid === recipientUserId ? conv.buyer_image : conv.owner_image,
         }));
-
-        // Emitir la lista actualizada de conversaciones al receptor
+    
+        // Gets conversations for sender
+        const senderConversationsResult = await pool.query(conversationsQuery, [userId]);
+        const formattedSenderConversations = senderConversationsResult.rows.map((conv) => ({
+          chatId: conv.chatid,
+          productId: conv.productid,
+          productName: conv.product_name,
+          productImage: conv.product_image,
+          buyerImage: conv.buyer_image,
+          ownerImage: conv.owner_image,
+          lastMessage: conv.last_message,
+          lastMessageDate: conv.last_message_date,
+          otherUserId: conv.owneruserid === userId ? conv.buyeruserid : conv.owneruserid,
+          otherUserImage: conv.owneruserid === userId ? conv.buyer_image : conv.owner_image,
+        }));
+    
+        // Emits updated conversation list for receiver
         if (recipientSocketId) {
           io.to(recipientSocketId).emit('conversations_listed', {
             message: 'Conversations retrieved successfully',
-            conversations: formattedConversations,
+            conversations: formattedRecipientConversations,
           });
         }
-
-        // Confirmación de activación del evento
+    
+        // Emits updated conversation list for sender
+        if (senderSocketId) {
+          io.to(senderSocketId).emit('conversations_listed', {
+            message: 'Conversations retrieved successfully',
+            conversations: formattedSenderConversations,
+          });
+        }
+    
+        // Confirmation for event activation
         socket.emit('event_confirmation', {
           message: 'Event createConversationAndMessage triggered successfully',
         });
@@ -300,7 +325,7 @@ export const websocketHandlers = (io: Server): void => {
       }
     });
 
-    // Evento para enviar un mensaje a una conversación existente
+    // Event for sending message to an existing conversation
     socket.on('sendMessage', async ({ chatId, content }) => {
 
       try {
@@ -309,7 +334,7 @@ export const websocketHandlers = (io: Server): void => {
           return;
         }
 
-        // Verificar si la conversación existe y el usuario es parte de ella
+        // Verifies if conversation exists and if user is involved
         const chatQuery = await pool.query(
           'SELECT buyeruserid, owneruserid FROM chats WHERE chatid = $1 AND (buyeruserid = $2 OR owneruserid = $2)',
           [chatId, userId]
@@ -322,13 +347,13 @@ export const websocketHandlers = (io: Server): void => {
 
         const { buyeruserid, owneruserid } = chatQuery.rows[0];
 
-        // Crear el mensaje asociado a la conversación
+        // Creates the message related to the conversation
         const newMessage = await pool.query(
           'INSERT INTO messages (chatid, senderuserid, content, createdat) VALUES ($1, $2, $3, NOW()) RETURNING *',
           [chatId, userId, content]
         );
 
-        // Formatear la respuesta con `isCurrentUser`
+        // Formats the response with `isCurrentUser`
         const formattedMessage = {
           chatId,
           senderUserId: newMessage.rows[0].senderuserid,
@@ -336,25 +361,25 @@ export const websocketHandlers = (io: Server): void => {
           createdAt: newMessage.rows[0].createdat,
         };
 
-        // Emitir el nuevo mensaje a todos los usuarios en la sala excepto al remitente
+        // Emits the new message in the room except form sender
         socket.broadcast.to(`chat_${chatId}`).emit('message_created', {
           message: 'Message sent successfully',
           data: { ...formattedMessage, isCurrentUser: false },
         });
 
-        // Emitir evento al remitente con el mensaje formateado
+        // Emits the new message to the sender
         socket.emit('message_created', {
           message: 'Message sent successfully',
           data: { ...formattedMessage, isCurrentUser: true },
         });
 
-        // Identificar al receptor
+        // Identifies receiver
         const recipientUserId = userId === owneruserid ? buyeruserid : owneruserid;
 
-        // Obtener el socket.id del receptor
+        // Gets the socketid from receiver
         const recipientSocketId = connectedUsers.get(recipientUserId);
 
-        // Obtener la lista actualizada de conversaciones para el receptor
+        // Gets updated conversations list for receiver
         const conversationsQuery = `
           SELECT
             c.chatid,
@@ -404,7 +429,7 @@ export const websocketHandlers = (io: Server): void => {
           otherUserImage: conv.owneruserid === recipientUserId ? conv.buyer_image : conv.owner_image,
         }));
 
-        // Emitir la lista actualizada de conversaciones al receptor
+        // Emits the updated conversations list to receiver
         if (recipientSocketId) {
           io.to(recipientSocketId).emit('conversations_listed', {
             message: 'Conversations retrieved successfully',
@@ -412,7 +437,7 @@ export const websocketHandlers = (io: Server): void => {
           });
         }
 
-        // Confirmación de activación del evento
+        //  Confirms the activation of the event 
         socket.emit('event_confirmation', {
           message: 'Event sendMessage triggered successfully',
         });
@@ -423,11 +448,11 @@ export const websocketHandlers = (io: Server): void => {
       }
     });
     
-    // Listar mensajes de una conversación
+    // List the messages of a conversation
     socket.on('listMessages', async ({ chatId, date }) => {
 
       if (!(await verifyUser(socket, userId))) {
-        return; // Si el token no es válido, el evento se detiene aquí
+        return; // If the token is invalid, the event stops here
       }
 
       try {
@@ -453,9 +478,9 @@ export const websocketHandlers = (io: Server): void => {
           content: message.content,
           senderUserId: message.senderuserid,
           createdAt: message.createdat,
-          senderImage: message.sender_image, // Imagen del remitente
-          productImage: message.product_image, // Imagen del producto
-          isCurrentUser: message.senderuserid === userId, // Verifica si es el usuario actual
+          senderImage: message.sender_image, // sender profile image
+          productImage: message.product_image, // product image
+          isCurrentUser: message.senderuserid === userId, // Verifies if is current user
         }));
     
         socket.emit('messages_listed', {
@@ -472,7 +497,7 @@ export const websocketHandlers = (io: Server): void => {
     socket.on('listConversations', async () => {
 
       if (!(await verifyUser(socket, userId))) {
-        return; // Si el token no es válido, el evento se detiene aquí
+        return; //If token is invalid, the event stops here
       }
       
       try {
@@ -518,8 +543,8 @@ export const websocketHandlers = (io: Server): void => {
           productImage: conv.product_image,
           buyerImage: conv.buyer_image,
           ownerImage: conv.owner_image,
-          lastMessage: conv.last_message, // Ya no necesitamos el fallback aquí
-          lastMessageDate: conv.last_message_date, // Ya no necesitamos el fallback aquí
+          lastMessage: conv.last_message, // Fallback is no needed here
+          lastMessageDate: conv.last_message_date, // Fallback is no needed here
           otherUserId: conv.owneruserid === userId ? conv.buyeruserid : conv.owneruserid,
           otherUserImage: conv.owneruserid === userId ? conv.buyer_image : conv.owner_image,
         }));
@@ -536,7 +561,7 @@ export const websocketHandlers = (io: Server): void => {
 
     socket.on('disconnect', () => {
       console.log(`Usuario desconectado: ${socket.id}`);
-      connectedUsers.delete(userId); // Eliminar al usuario del mapa
+      connectedUsers.delete(userId); // Deletes user from connected users map
     });
   });
 };
