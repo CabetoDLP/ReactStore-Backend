@@ -28,7 +28,7 @@ console.log("CORS_METHODS:", process.env.CORS_METHODS);
 console.log("NODE_ENV:", process.env.NODE_ENV);
 
 const app = express();
-const httpServer = http.createServer(app); // creates a HTTP server
+const httpServer = http.createServer(app); // creates an HTTP server
 const io = new Server(httpServer, {
   cors: {
     origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
@@ -47,24 +47,17 @@ export const corsOptions = {
     'X-Requested-With',
     'Accept',
     'Origin',
+    'Access-Control-Allow-Origin',
   ],
   exposedHeaders: ['Authorization', 'Set-Cookie'],
   credentials: true,
   optionsSuccessStatus: 204,
-  preflightContinue: false,
+  preflightContinue: true, 
 };
 
 // Middlewares
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || 'http://localhost:5173');
-  res.header('Access-Control-Allow-Methods', process.env.CORS_METHODS || 'GET, POST, PUT, DELETE');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  next();
-});
-
-app.use(cors(corsOptions)); // uses the middleware with the stablished options
-app.options('*', cors(corsOptions)); // Handles all options requests
+app.use(cors(corsOptions)); 
+app.options('*', cors(corsOptions)); 
 app.use(express.json());
 app.use(usersRoutes);
 
@@ -85,8 +78,8 @@ app.use((req, res) => {
 websocketHandlers(io);
 
 // Runs the server
-const PORT = (process.env.PORT || 5000);
+const PORT = process.env.PORT || 5000;
 
 httpServer.listen(PORT, () => {
-  console.log(`Server running in http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });
