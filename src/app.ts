@@ -56,6 +56,7 @@ export const corsOptions = {
 
 // Middlewares
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handles options requests
 app.use(express.json());
 app.use(usersRoutes);
 
@@ -68,7 +69,7 @@ app.get('/test-env', (req, res) => {
   res.json({ CORS_ORIGIN: process.env.CORS_ORIGIN });
 });
 
-// Error handeling
+// Error handling
 app.use((req, res) => {
   res.status(404).send('Route not found');
 });
