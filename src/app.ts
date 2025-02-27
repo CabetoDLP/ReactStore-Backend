@@ -42,6 +42,7 @@ export const corsOptions = {
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   methods: process.env.CORS_METHODS?.split(',') as string[] || ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: [
+    'Access-Control-Allow-Origin',
     'Content-Type',
     'Authorization',
     'X-Requested-With',
