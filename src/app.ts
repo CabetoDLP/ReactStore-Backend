@@ -42,7 +42,6 @@ export const corsOptions = {
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   methods: process.env.CORS_METHODS?.split(',') as string[] || ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: [
-    'Access-Control-Allow-Origin',
     'Content-Type',
     'Authorization',
     'X-Requested-With',
@@ -56,8 +55,16 @@ export const corsOptions = {
 };
 
 // Middlewares
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Handles options requests
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || 'http://localhost:5173');
+  res.header('Access-Control-Allow-Methods', process.env.CORS_METHODS || 'GET, POST, PUT, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+});
+
+app.use(cors(corsOptions)); // uses the middleware with the stablished options
+app.options('*', cors(corsOptions)); // Handles all options requests
 app.use(express.json());
 app.use(usersRoutes);
 
