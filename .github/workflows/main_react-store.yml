@@ -67,10 +67,10 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_F3C6C2A227AB43338791C3202271BDB7 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_4B9EB4B0E51048F68BB14D7DC6AEDA7E }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_C950A8F36FB84142AF2C600A6D67F911 }}
-          
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_44D8E1D6DB5F45378F2BE7D4893F5665 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5923A005227542179A9091B0D283E3F9 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7991014CE1794F69B5ACDC37D407C150 }}
+
       - name: Set Node.js startup command for Azure
         run: |
           echo "STARTUP_COMMAND=npm install && node dist/app.js" >> $GITHUB_ENV
