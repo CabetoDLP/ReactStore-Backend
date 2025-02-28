@@ -825,6 +825,38 @@ router.get('/purchases/showPurchasedProducts', async (req: Request<{}, {}>, res:
       return;
     }
 
+    // Query all public product information
+    const purchasedProducts = await pool.query(
+      'SELECT purchasedproducts.productid AS productid, products.name AS name, purchasedproducts.quantity AS quantity, products.price AS price, products.imageurls[1] AS imageurl, purchasedproducts.createdat AS createdat FROM purchasedproducts INNER JOIN products ON purchasedproducts.productid = products.productid'
+    );
+
+    // Respond with the created product
+    res.status(200).json({
+      message: 'Listed purchased products',
+      purchasedProducts: purchasedProducts.rows,
+    });
+  } catch (err: any) {
+    console.error('Error occurred while consulting categories: ', err.message);
+    res.status(500).json({ message: 'Internal server error', error: err.message });
+  }
+});
+
+// View purchased products
+router.get('/purchases/showPurchasedProducts', async (req: Request<{}, {}>, res: Response) => {
+  try {
+    const token = req.cookies.auth_token;
+
+    if (!token) {
+      res.status(401).json({ message: 'Unauthorized. Token not found' });
+      return;
+    }
+
+    const userid = getUserFromToken(token)?.userid;
+    if (!userid) {
+      res.status(401).json({ message: 'Unauthorized. Invalid token' });
+      return;
+    }
+
     // Query purchased products for the specific user
     const purchasedProducts = await pool.query(
       `SELECT 
