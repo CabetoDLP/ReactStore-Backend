@@ -82,11 +82,6 @@ interface CartProduct {
   quantity: number;
 }
 
-interface Filters {
-  name: string;
-  category: string;
-}
-
 interface JwtPayload {
   userid: string;  // Ensure the payload contains a 'userid' as a string
 }
@@ -169,7 +164,7 @@ router.post('/users/register', cors(corsOptions), upload.single('image'), async 
         <p>Your verification code is: <strong>${verificationCode}</strong></p>
         <p>You can verify your account using the following link:</p>
         <p>
-          <a href="https://${process.env.WEBSITE_FRONTEND_HOSTNAME}/userVerity?email=${email}" target="_blank" rel="noopener noreferrer">
+          <a href="${process.env.WEBSITE_FRONTEND_HOSTNAME}/userVerity?email=${email}" target="_blank" rel="noopener noreferrer">
             Verify your account
           </a>
         </p>
@@ -830,18 +825,28 @@ router.get('/purchases/showPurchasedProducts', async (req: Request<{}, {}>, res:
       return;
     }
 
-    // Query all public product information
+    // Query purchased products for the specific user
     const purchasedProducts = await pool.query(
-      'SELECT purchasedproducts.productid AS productid, products.name AS name, purchasedproducts.quantity AS quantity, products.price AS price, products.imageurls[1] AS imageurl, purchasedproducts.createdat AS createdat FROM purchasedproducts INNER JOIN products ON purchasedproducts.productid = products.productid'
+      `SELECT 
+         purchasedproducts.productid AS productid, 
+         products.name AS name, 
+         purchasedproducts.quantity AS quantity, 
+         products.price AS price, 
+         products.imageurls[1] AS imageurl, 
+         purchasedproducts.createdat AS createdat 
+       FROM purchasedproducts 
+       INNER JOIN products ON purchasedproducts.productid = products.productid
+       WHERE purchasedproducts.userid = $1`, // Filtra por el userid del usuario
+      [userid] // Pasa el userid como parámetro
     );
 
-    // Respond with the created product
+    // Respond with the purchased products
     res.status(200).json({
       message: 'Listed purchased products',
       purchasedProducts: purchasedProducts.rows,
     });
   } catch (err: any) {
-    console.error('Error occurred while consulting categories: ', err.message);
+    console.error('Error occurred while consulting purchased products: ', err.message);
     res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 });
