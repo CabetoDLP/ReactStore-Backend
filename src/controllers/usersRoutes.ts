@@ -786,7 +786,7 @@ router.get('/cart/buyProducts', async (req: Request<{}, {}>, res: Response) => {
     for (const cartProduct of userCartProducts.rows) {
       const purchasedProductId = uuidv4();
       await client.query(
-        'INSERT INTO purchasedproducts (purchasedproductid, userid, productid, quantity, isactive, createdat) VALUES ($1, $2, $3, TRUE, NOW())',
+        'INSERT INTO purchasedproducts (purchasedproductid, userid, productid, quantity, isactive, createdat) VALUES ($1, $2, $3, $4, TRUE, NOW())',
         [purchasedProductId, userid, cartProduct.productid, cartProduct.quantity]
       );
     }
