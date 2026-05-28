@@ -4,7 +4,7 @@
   "main": "app.js",
   "scripts": {
     "test": "jest --passWithNoTests",
-    "build": "tsc",
+    "build": "npx tsc",
     "start": "node dist/app.js"
   },
   "keywords": [],
@@ -26,7 +26,8 @@
     "pg": "^8.13.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
-    "uuid": "^11.0.3"
+    "uuid": "^11.0.3",
+    "typescript": "^5.8.2"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
