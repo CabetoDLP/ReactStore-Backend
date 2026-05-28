@@ -14,7 +14,7 @@
   "dependencies": {
     "@mui/x-data-grid": "^7.23.5",
     "bcryptjs": "^2.4.3",
-    "cloudinary": "^2.5.1",
+    "cloudinary": "^2.6.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -35,7 +35,7 @@
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",
     "@types/jsonwebtoken": "^9.0.7",
-    "@types/multer": "^1.4.12",
+    "@types/multer": "^1.4.13",
     "@types/nodemailer": "^6.4.17",
     "@types/pg": "^8.11.10",
     "@types/socket.io": "^3.0.1",

@@ -10,12 +10,10 @@ export const pool = new Pool({
   database: process.env.DB,
   password: process.env.DB_PASS,
   port: 5432,
-  ssl: process.env.NODE_ENV === 'production' //false
-  /*
-    ssl: {
-      rejectUnauthorized: false // This param helps if gets problems with ssl certificates
-    }
-  */
+  ssl: {
+    rejectUnauthorized: false // This param helps if gets problems with ssl certificates
+  }
+  
 });
 
 pool
