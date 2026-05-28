@@ -23,15 +23,17 @@ console.log("USER_FOLDER:", process.env.USER_FOLDER);
 console.log("PRODUCT_FOLDER:", process.env.PRODUCT_FOLDER);
 console.log("MAX_FILE_SIZE:", process.env.MAX_FILE_SIZE);
 console.log("COOKIE_MAX_AGE:", process.env.COOKIE_MAX_AGE);
-console.log("CORS_ORIGIN:", process.env.CORS_ORIGIN);
+//console.log("CORS_ORIGIN:", process.env.CORS_ORIGIN);
 console.log("CORS_METHODS:", process.env.CORS_METHODS);
 console.log("NODE_ENV:", process.env.NODE_ENV);
+
+const allowedOrigin = 'https://react-store-frontend-indol.vercel.app';
 
 const app = express();
 const httpServer = http.createServer(app); // creates an HTTP server
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: allowedOrigin || 'http://localhost:5173', //process.env.CORS_ORIGIN
     methods: process.env.CORS_METHODS?.split(',') || ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true,
   },
@@ -39,7 +41,7 @@ const io = new Server(httpServer, {
 
 // CORS options
 export const corsOptions = {
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: allowedOrigin || 'http://localhost:5173', //process.env.CORS_ORIGIN
   methods: process.env.CORS_METHODS?.split(',') as string[] || ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: [
     'Content-Type',

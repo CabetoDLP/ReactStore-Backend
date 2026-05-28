@@ -15,6 +15,9 @@
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node"
   },
+
+  // Silence deprecation errors for TypeScript 6.x related to legacy options
+  "ignoreDeprecations": "6.0",
   "include": ["src/**/*"],
   "exclude": ["node_modules"]
 }
