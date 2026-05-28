@@ -269,7 +269,11 @@ router.post('/users/login', async (req: Request<{}, {}, UserAuth>, res: Response
     }
 
     // Create JSON Web Token (JWT)
-    const token = jwt.sign({ userid: user.userid }, jwtSecret, { expiresIn: process.env.JWT_EXPIRES_IN as string | undefined });
+    const token = jwt.sign(
+      { userid: user.userid },
+      jwtSecret,
+      { expiresIn: String(process.env.JWT_EXPIRES_IN || '1h') }
+    );
 
     // Set the cookie
     res.cookie('auth_token', token, {
