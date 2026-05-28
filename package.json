@@ -23,6 +23,7 @@
     "@types/nodemailer": "^6.4.17",
     "@types/pg": "^8.11.10",
     "@types/socket.io": "^3.0.1",
+    "@types/cookie": "^0.6.0",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.6.1",
     "cookie-parser": "^1.4.7",
