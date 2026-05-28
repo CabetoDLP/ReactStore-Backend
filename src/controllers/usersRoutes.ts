@@ -272,7 +272,7 @@ router.post('/users/login', async (req: Request<{}, {}, UserAuth>, res: Response
     const token = jwt.sign(
       { userid: user.userid },
       jwtSecret,
-      { expiresIn: String(process.env.JWT_EXPIRES_IN || '1h') }
+      { expiresIn: process.env.JWT_EXPIRES_IN as any }
     );
 
     // Set the cookie
